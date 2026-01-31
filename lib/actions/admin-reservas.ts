@@ -1,0 +1,127 @@
+"use server"
+
+import { prisma } from "@/lib/prisma"
+import { auth } from "@/auth"
+import { revalidatePath } from "next/cache"
+
+const ROL_ADMIN = "ADMINISTRADOR"
+
+export type EstadoReserva = "PENDIENTE" | "CONFIRMADO" | "COMPLETADO" | "CANCELADO"
+
+/** Mapeo BD (cualquier formato) → UI (español) para mostrar en la lista */
+const ESTADO_DB_TO_UI: Record<string, EstadoReserva> = {
+  PENDING: "PENDIENTE",
+  PENDIENTE: "PENDIENTE",
+  Pendiente: "PENDIENTE",
+  CONFIRMED: "CONFIRMADO",
+  CONFIRMADO: "CONFIRMADO",
+  Confirmado: "CONFIRMADO",
+  COMPLETED: "COMPLETADO",
+  COMPLETADO: "COMPLETADO",
+  Completado: "COMPLETADO",
+  CANCELED: "CANCELADO",
+  CANCELADO: "CANCELADO",
+  Cancelado: "CANCELADO",
+}
+
+/** Formato que acepta el enum en la BD (primera letra mayúscula) */
+const ESTADO_PARA_BD: Record<EstadoReserva, string> = {
+  PENDIENTE: "Pendiente",
+  CONFIRMADO: "Confirmado",
+  COMPLETADO: "Completado",
+  CANCELADO: "Cancelado",
+}
+
+type ReservaRow = {
+  idres: number
+  idcli: number | null
+  idveh: number | null
+  costo: number | null
+  fechafin: Date | null
+  fechafinalizacion: Date | null
+  fechainicio: Date | null
+  fechares: Date | null
+  estado: string | null
+  u_idprop: number | null
+  emailprop: string | null
+  nomprop: string | null
+  apeprop: string | null
+  telefonoprop: string | null
+  v_idveh: number | null
+  plaveh: string | null
+  marveh: string | null
+  modveh: string | null
+}
+
+export async function listReservas() {
+  const session = await auth()
+  if (!session?.user || session.user.rol?.toUpperCase() !== ROL_ADMIN) {
+    return []
+  }
+
+  const rows = await prisma.$queryRaw<ReservaRow[]>`
+    SELECT r.idres, r.idcli, r.idveh, r.costo, r.fechafin, r.fechafinalizacion, r.fechainicio, r.fechares, r.estado::text as estado,
+           u.idprop as u_idprop, u.emailprop, u.nomprop, u.apeprop, u.telefonoprop,
+           v.idveh as v_idveh, v.plaveh, v.marveh, v.modveh
+    FROM reserva r
+    LEFT JOIN usuario u ON r.idcli = u.idprop
+    LEFT JOIN vehiculo v ON r.idveh = v.idveh
+    ORDER BY r.fechares DESC NULLS LAST, r.idres DESC
+  `
+
+  return rows.map((r) => ({
+    idres: r.idres,
+    idcli: r.idcli,
+    idveh: r.idveh,
+    costo: r.costo,
+    fechafin: r.fechafin,
+    fechafinalizacion: r.fechafinalizacion,
+    fechainicio: r.fechainicio,
+    fechares: r.fechares,
+    estado: (r.estado ? ESTADO_DB_TO_UI[r.estado] ?? (r.estado as EstadoReserva) : null) as EstadoReserva | null,
+    usuario: r.u_idprop != null ? {
+      idprop: r.u_idprop,
+      emailprop: r.emailprop,
+      nomprop: r.nomprop,
+      apeprop: r.apeprop,
+      telefonoprop: r.telefonoprop,
+    } : null,
+    vehiculo: r.v_idveh != null ? {
+      idveh: r.v_idveh,
+      plaveh: r.plaveh,
+      marveh: r.marveh,
+      modveh: r.modveh,
+    } : null,
+  }))
+}
+
+export async function updateReservaEstado(
+  idres: number,
+  estado: EstadoReserva
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth()
+  if (!session?.user || session.user.rol?.toUpperCase() !== ROL_ADMIN) {
+    return { ok: false, error: "No autorizado." }
+  }
+
+  const valid: EstadoReserva[] = ["PENDIENTE", "CONFIRMADO", "COMPLETADO", "CANCELADO"]
+  if (!valid.includes(estado)) {
+    return { ok: false, error: "Estado no válido." }
+  }
+
+  const valorBd = ESTADO_PARA_BD[estado]
+  try {
+    const result = await prisma.$executeRaw`
+      UPDATE reserva SET estado = CAST(${valorBd} AS "EstadoReserva") WHERE idres = ${idres}
+    `
+    if (result === 0) {
+      return { ok: false, error: "Reserva no encontrada." }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: message }
+  }
+
+  revalidatePath("/dashboard/reservas")
+  return { ok: true }
+}

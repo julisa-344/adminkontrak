@@ -1,0 +1,18 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+# build
+.next
+out
+# env (no subir secretos)
+.env
+.env.local
+.env.*.local
+# debug
+npm-debug.log*
+# misc
+.DS_Store
+*.pem
+# prisma
+prisma/migrations/**/migration_lock.toml
