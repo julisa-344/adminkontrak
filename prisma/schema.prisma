@@ -35,56 +35,89 @@ model mantenimiento {
 }
 
 model reserva {
-  costo             Int?
-  idcli             Int?
   idres             Int             @id @default(autoincrement())
-  idveh             Int?
-  fechafin          DateTime?       @db.Timestamp(6)
-  fechafinalizacion DateTime?       @db.Timestamp(6)
-  fechainicio       DateTime?       @db.Timestamp(6)
   fechares          DateTime?       @db.Timestamp(6)
+  fechainicio       DateTime?       @db.Timestamp(6)
+  fechafin          DateTime?       @db.Timestamp(6)
+  costo             Int?
+  fechafinalizacion DateTime?       @db.Timestamp(6)
+  idcli             Int?
+  idveh             Int?
   estado            EstadoReserva?  @default(PENDIENTE)
+  
+  // Campos de auditoría
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @default(now()) @updatedAt
+  created_by        Int?
+  updated_by        Int?
+  
+  // Relaciones
   mantenimiento     mantenimiento[]
   usuario           usuario?        @relation("ClienteReservas", fields: [idcli], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fkhcb7l9qoy85ndceeubthuid7g")
   vehiculo          vehiculo?       @relation(fields: [idveh], references: [idveh], onDelete: NoAction, onUpdate: NoAction, map: "fkj2yfy568nnvlnkxm9k7329j4s")
 }
 
 model usuario {
-  estprop              Boolean?
   idprop               Int                    @id @default(autoincrement())
+  nomprop              String?                @db.VarChar(255)
   apeprop              String?                @db.VarChar(255)
   dniprop              String?                @db.VarChar(255)
   emailprop            String?                @unique @db.VarChar(255)
-  nomprop              String?                @db.VarChar(255)
   password             String?                @db.VarChar(255)
-  rol                  String?                @db.VarChar(255)
+  estprop              Boolean?
   telefonoprop         String?                @db.VarChar(20)
+  rol                  String?                @db.VarChar(255)
+  authUserId           String?                @unique
+  
+  // Campos de auditoría
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @default(now()) @updatedAt
+  created_by           Int?
+  updated_by           Int?
+  
+  // Relaciones existentes
   mantenimiento        mantenimiento[]
   reserva              reserva[]              @relation("ClienteReservas")
+  user                 user?                  @relation(fields: [authUserId], references: [id])
   vehiculo             vehiculo[]
   vehiculos_eliminados vehiculos_eliminados[]
+  
+  // Nuevas relaciones de auditoría
+  audit_logs           audit_log[]            // Logs de auditoría donde este usuario hizo cambios
+  created_by_user      usuario?               @relation("UserCreatedBy", fields: [created_by], references: [idprop])
+  updated_by_user      usuario?               @relation("UserUpdatedBy", fields: [updated_by], references: [idprop])
+  users_created        usuario[]              @relation("UserCreatedBy")
+  users_updated        usuario[]              @relation("UserUpdatedBy")
 }
 
 model vehiculo {
-  anioveh                Int?
-  fecharegistro          DateTime?              @db.Date
-  horas_uso              Float?
-  idprop                 Int?
   idveh                  Int                    @id @default(autoincrement())
-  peso                   Float?
-  potencia               Float?
-  precioalquilo          Float?
-  requiere_certificacion Boolean?
-  accesorios             String?                @db.VarChar(500)
-  capacidad              String?                @db.VarChar(255)
-  categoria              String?                @db.VarChar(255)
-  dimensiones            String?                @db.VarChar(255)
-  estveh                 EstadoVehiculo?
-  fotoveh                String?                @db.Text
-  imagenUrl              String?                @db.Text
-  marveh                 String?                @db.VarChar(255)
-  modveh                 String?                @db.VarChar(255) @unique
   plaveh                 String?                @db.VarChar(255)
+  marveh                 String?                @db.VarChar(255)
+  modveh                 String?                @unique @db.VarChar(255)
+  anioveh                Int?
+  categoria              String?                @db.VarChar(255)
+  potencia               Float?
+  capacidad              String?                @db.VarChar(255)
+  dimensiones            String?                @db.VarChar(255)
+  peso                   Float?
+  accesorios             String?                @db.VarChar(500)
+  requiere_certificacion Boolean?
+  horas_uso              Float?
+  precioalquilo          Float?
+  fecharegistro          DateTime?              @db.Date
+  fotoveh                String?
+  idprop                 Int?
+  estveh                 EstadoVehiculo?
+  imagenUrl              String?
+  
+  // Campos de auditoría
+  created_at             DateTime               @default(now())
+  updated_at             DateTime               @default(now()) @updatedAt
+  created_by             Int?
+  updated_by             Int?
+  
+  // Relaciones existentes
   mantenimiento          mantenimiento[]
   reserva                reserva[]
   usuario                usuario?               @relation(fields: [idprop], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fk2pu1225mw666tkb93d0dhd49v")
@@ -101,6 +134,61 @@ model vehiculos_eliminados {
   usuario       usuario  @relation(fields: [idprop], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fksanpo3lbpuvrt9yxfhec1hsqm")
 }
 
+model account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model user {
+  id            String    @id
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  rol           String?   @db.VarChar(255)
+  nomprop       String?   @db.VarChar(255)
+  apeprop       String?   @db.VarChar(255)
+  dniprop       String?   @db.VarChar(255)
+  account       account[]
+  session       session[]
+  usuario       usuario?
+}
+
+model verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+}
+
 enum EstadoVehiculo {
   DISPONIBLE
   OCUPADO
@@ -110,7 +198,51 @@ enum EstadoVehiculo {
 
 enum EstadoReserva {
   PENDIENTE
-  CONFIRMADO
-  COMPLETADO
-  CANCELADO
+  CONFIRMADA
+  RECHAZADA
+  ESPERANDO_CLIENTE
+  EN_USO
+  ESPERANDO_PROPIETARIO
+  FINALIZADA
+  CANCELADA
+}
+
+enum Rol {
+  PROPIETARIO
+  CLIENTE
+  ADMINISTRADOR
+}
+
+// ===== SISTEMA DE AUDITORÍA =====
+model audit_log {
+  id              Int      @id @default(autoincrement())
+  tabla           String   @db.VarChar(50)          // Nombre de la tabla afectada
+  registro_id     String   @db.VarChar(50)          // ID del registro afectado
+  operacion       AuditAction                       // CREATE, UPDATE, DELETE
+  datos_anteriores Json?                            // Datos antes del cambio (para UPDATE/DELETE)
+  datos_nuevos     Json?                            // Datos después del cambio (para CREATE/UPDATE)
+  usuario_id      Int?                              // ID del usuario que hizo el cambio
+  usuario_email   String?  @db.VarChar(255)         // Email del usuario (backup)
+  ip_address      String?  @db.VarChar(45)          // IP desde donde se hizo el cambio
+  user_agent      String?  @db.Text                 // Navegador/aplicación usada
+  fecha_cambio    DateTime @default(now())          // Timestamp del cambio
+  sesion_id       String?  @db.VarChar(255)         // ID de sesión (opcional)
+  comentario      String?  @db.Text                 // Comentario adicional
+  
+  // Relación con usuario (opcional)
+  usuario         usuario? @relation(fields: [usuario_id], references: [idprop], onDelete: SetNull)
+  
+  @@index([tabla, registro_id])
+  @@index([usuario_id])
+  @@index([fecha_cambio])
+  @@index([operacion])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  FAILED_LOGIN
 }
