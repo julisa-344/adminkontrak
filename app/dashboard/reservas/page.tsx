@@ -60,7 +60,7 @@ export default async function DashboardReservasPage() {
                         <span className="inline-flex items-center gap-1.5 text-sm text-gray-900">
                           <User className="w-4 h-4 text-gray-400 shrink-0" />
                           <span>
-                            {[r.usuario.nomprop, r.usuario.apeprop].filter(Boolean).join(" ") || r.usuario.emailprop ?? "—"}
+                            {([r.usuario.nomprop, r.usuario.apeprop].filter(Boolean).join(" ") || r.usuario.emailprop) ?? "—"}
                           </span>
                         </span>
                       ) : (
