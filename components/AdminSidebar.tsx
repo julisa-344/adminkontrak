@@ -10,7 +10,7 @@ const navItems = [
   { href: "/dashboard/vehiculos", label: "Productos", icon: Truck },
   { href: "/dashboard/reservas", label: "Reservas", icon: Calendar },
   { href: "/dashboard/usuarios", label: "Usuarios", icon: Users },
-  { href: "/dashboard/marcas", label: "Marcas", icon: Tag },
+  // { href: "/dashboard/marcas", label: "Marcas", icon: Tag }, // Oculto temporalmente
   { href: "/dashboard/auditoria", label: "Auditoría", icon: Shield },
 ]
 

@@ -44,14 +44,14 @@ async function main() {
     // Configurar contexto de auditoría
     setAuditContext({
       userId: admin.idprop,
-      userEmail: admin.emailprop || "admin@autorent.com",
+      userEmail: admin.emailprop || "admin@kontrak.com",
       ipAddress: "127.0.0.1",
       userAgent: "Script de pruebas",
       comment: "Registro automático de prueba"
     })
 
     // Crear algunos logs de ejemplo
-    await auditLoginAttempt(admin.emailprop || "admin@autorent.com", true, "127.0.0.1", "Script de pruebas")
+    await auditLoginAttempt(admin.emailprop || "admin@kontrak.com", true, "127.0.0.1", "Script de pruebas")
     
     // Simular algunos cambios en vehículos
     const vehiculos = await prisma.vehiculo.findMany({ take: 3 })

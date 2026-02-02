@@ -44,12 +44,12 @@ async function main() {
     // Buscar el usuario admin
     const admin = await prisma.usuario.findUnique({
       where: {
-        emailprop: "admin@autorent.com"
+        emailprop: "admin@kontrak.com"
       }
     })
 
     if (!admin) {
-      console.error("❌ No se encontró usuario admin con email admin@autorent.com")
+      console.error("❌ No se encontró usuario admin con email admin@kontrak.com")
       return
     }
 
@@ -61,7 +61,7 @@ async function main() {
     // Actualizar la contraseña
     await prisma.usuario.update({
       where: { 
-        emailprop: "admin@autorent.com" 
+        emailprop: "admin@kontrak.com" 
       },
       data: { 
         password: hashedPassword,

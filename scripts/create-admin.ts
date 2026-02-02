@@ -38,7 +38,7 @@ async function main() {
       where: {
         OR: [
           { rol: "administrador" },
-          { emailprop: "admin@autorent.com" }
+          { emailprop: "admin@kontrak.com" }
         ]
       }
     })
@@ -70,7 +70,7 @@ async function main() {
       data: {
         nomprop: "Administrador",
         apeprop: "Sistema", 
-        emailprop: "admin@autorent.com",
+        emailprop: "admin@kontrak.com",
         password: hashedPassword,
         rol: "administrador",
         estprop: true,
