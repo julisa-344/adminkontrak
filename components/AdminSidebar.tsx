@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Truck, Calendar, Users, LogOut, ExternalLink, Shield } from "lucide-react"
+import { LayoutDashboard, Truck, Calendar, Users, LogOut, ExternalLink, Shield, Tag } from "lucide-react"
 import { signOut } from "next-auth/react"
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard/vehiculos", label: "Productos", icon: Truck },
   { href: "/dashboard/reservas", label: "Reservas", icon: Calendar },
   { href: "/dashboard/usuarios", label: "Usuarios", icon: Users },
+  { href: "/dashboard/marcas", label: "Marcas", icon: Tag },
   { href: "/dashboard/auditoria", label: "Auditoría", icon: Shield },
 ]
 

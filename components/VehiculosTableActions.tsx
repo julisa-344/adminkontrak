@@ -21,7 +21,7 @@ export function VehiculosTableActions({ idveh, estveh, modveh }: Props) {
   const [mantenimiento, setMantenimiento] = useState(false)
 
   async function handleDelete() {
-    if (!confirm(`¿Eliminar "${modveh}"? Esta acción no se puede deshacer.`)) return
+    if (!confirm(`¿Eliminar "${modveh}" del sistema? El vehículo será marcado como eliminado pero conservado en la base de datos.`)) return
     setDeleting(true)
     const res = await eliminarVehiculo(idveh)
     setDeleting(false)

@@ -48,13 +48,38 @@ export function VehiculoForm({
 }: VehiculoFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const d = defaultValues ?? {}
+
+  // Manejar cambio de archivo de imagen
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      // Crear preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setImageFile(null)
+      setImagePreview(null)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     const form = e.currentTarget
     const formData = new FormData(form)
+    
+    // Agregar el archivo de imagen al FormData si existe
+    if (imageFile) {
+      formData.append('image', imageFile)
+    }
+    
     try {
       let res: { ok: boolean; error?: string }
       if (mode === "create" && onSubmitCreate) {
@@ -241,25 +266,30 @@ export function VehiculoForm({
             placeholder="Opcional"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ruta imagen local (fotoveh)</label>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Imagen del vehículo
+          </label>
           <input
-            type="text"
-            name="fotoveh"
-            defaultValue={d.fotoveh ?? ""}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Ej. /products/foto.png"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">URL imagen externa (imagenUrl)</label>
-          <input
-            type="url"
-            name="imagenUrl"
-            defaultValue={d.imagenUrl ?? ""}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="https://..."
-          />
+          <p className="text-xs text-gray-500 mt-1">
+            Formatos aceptados: JPG, PNG, WEBP. Tamaño máximo: 5MB
+          </p>
+          {/* Preview de la imagen */}
+          {(imagePreview || d.imagenUrl) && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-2">Vista previa:</p>
+              <img
+                src={imagePreview || d.imagenUrl || ''}
+                alt="Preview"
+                className="w-full max-w-md h-48 object-cover rounded-lg border border-gray-200"
+              />
+            </div>
+          )}
         </div>
         <div className="flex items-center">
           <input

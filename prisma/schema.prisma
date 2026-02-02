@@ -34,6 +34,30 @@ model mantenimiento {
   usuario               usuario?               @relation(fields: [idprop], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fkis0owv6xp5ipmv21ki0mw1ah6")
 }
 
+// Modelo para gestión de marcas
+model marca {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique @db.VarChar(100)
+  descripcion   String?  @db.Text
+  logo_url      String?  @db.Text
+  activa        Boolean  @default(true)
+  
+  // Campos de auditoría
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime? // Soft delete
+  deleted_by    Int?
+  
+  // Relaciones
+  vehiculos     vehiculo[]
+  
+  // Relaciones de auditoría
+  created_by_user usuario? @relation("MarcaCreatedBy", fields: [created_by], references: [idprop])
+  updated_by_user usuario? @relation("MarcaUpdatedBy", fields: [updated_by], references: [idprop])
+}
+
 model reserva {
   idres             Int             @id @default(autoincrement())
   fechares          DateTime?       @db.Timestamp(6)
@@ -50,6 +74,8 @@ model reserva {
   updated_at        DateTime        @default(now()) @updatedAt
   created_by        Int?
   updated_by        Int?
+  deleted_at        DateTime?       // Soft delete
+  deleted_by        Int?
   
   // Relaciones
   mantenimiento     mantenimiento[]
@@ -74,6 +100,8 @@ model usuario {
   updated_at           DateTime               @default(now()) @updatedAt
   created_by           Int?
   updated_by           Int?
+  deleted_at           DateTime?              // Soft delete
+  deleted_by           Int?
   
   // Relaciones existentes
   mantenimiento        mantenimiento[]
@@ -88,6 +116,10 @@ model usuario {
   updated_by_user      usuario?               @relation("UserUpdatedBy", fields: [updated_by], references: [idprop])
   users_created        usuario[]              @relation("UserCreatedBy")
   users_updated        usuario[]              @relation("UserUpdatedBy")
+  
+  // Relaciones de marcas
+  marcas_created       marca[]                @relation("MarcaCreatedBy")
+  marcas_updated       marca[]                @relation("MarcaUpdatedBy")
 }
 
 model vehiculo {
@@ -110,18 +142,22 @@ model vehiculo {
   idprop                 Int?
   estveh                 EstadoVehiculo?
   imagenUrl              String?
+  marca_id               Int?
   
   // Campos de auditoría
   created_at             DateTime               @default(now())
   updated_at             DateTime               @default(now()) @updatedAt
   created_by             Int?
   updated_by             Int?
+  deleted_at             DateTime?              // Soft delete
+  deleted_by             Int?
   
   // Relaciones existentes
   mantenimiento          mantenimiento[]
   reserva                reserva[]
   usuario                usuario?               @relation(fields: [idprop], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fk2pu1225mw666tkb93d0dhd49v")
   vehiculos_eliminados   vehiculos_eliminados[]
+  marca                  marca?                 @relation(fields: [marca_id], references: [id], onDelete: SetNull)
 }
 
 model vehiculos_eliminados {

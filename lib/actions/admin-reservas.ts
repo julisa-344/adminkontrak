@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
+import { softDeleteReserva, notDeleted } from "@/lib/soft-delete"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
 
@@ -64,8 +65,9 @@ export async function listReservas() {
            u.idprop as u_idprop, u.emailprop, u.nomprop, u.apeprop, u.telefonoprop,
            v.idveh as v_idveh, v.plaveh, v.marveh, v.modveh
     FROM reserva r
-    LEFT JOIN usuario u ON r.idcli = u.idprop
-    LEFT JOIN vehiculo v ON r.idveh = v.idveh
+    LEFT JOIN usuario u ON r.idcli = u.idprop AND u.deleted_at IS NULL
+    LEFT JOIN vehiculo v ON r.idveh = v.idveh AND v.deleted_at IS NULL
+    WHERE r.deleted_at IS NULL
     ORDER BY r.fechares DESC NULLS LAST, r.idres DESC
   `
 
@@ -120,6 +122,41 @@ export async function updateReservaEstado(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { ok: false, error: message }
+  }
+
+  revalidatePath("/dashboard/reservas")
+  return { ok: true }
+}
+
+/**
+ * Elimina una reserva usando soft delete
+ */
+export async function deleteReserva(idres: number, reason?: string): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth()
+  if (!session?.user || session.user.rol?.toUpperCase() !== ROL_ADMIN) {
+    return { ok: false, error: "No autorizado." }
+  }
+
+  // Verificar que la reserva exista y no esté ya eliminada
+  const reserva = await prisma.reserva.findUnique({
+    where: { 
+      idres,
+      deleted_at: null 
+    }
+  })
+
+  if (!reserva) {
+    return { ok: false, error: "Reserva no encontrada" }
+  }
+
+  // Realizar soft delete
+  const result = await softDeleteReserva(
+    idres, 
+    reason || "Eliminada desde panel administrativo"
+  )
+
+  if (!result.success) {
+    return { ok: false, error: result.error || "Error al eliminar reserva" }
   }
 
   revalidatePath("/dashboard/reservas")
