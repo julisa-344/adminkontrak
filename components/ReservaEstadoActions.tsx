@@ -8,9 +8,9 @@ import { ChevronDown } from "lucide-react"
 
 const ESTADOS: { value: EstadoReserva; label: string; color: string }[] = [
   { value: "PENDIENTE", label: "Pendiente", color: "bg-amber-100 text-amber-800" },
-  { value: "CONFIRMADO", label: "Confirmada", color: "bg-blue-100 text-blue-800" },
-  { value: "COMPLETADO", label: "Completada", color: "bg-green-100 text-green-800" },
-  { value: "CANCELADO", label: "Cancelada", color: "bg-red-100 text-red-800" },
+  { value: "CONFIRMADA", label: "Confirmada", color: "bg-blue-100 text-blue-800" },
+  { value: "FINALIZADA", label: "Finalizada", color: "bg-green-100 text-green-800" },
+  { value: "CANCELADA", label: "Cancelada", color: "bg-red-100 text-red-800" },
 ]
 
 export function ReservaEstadoActions({

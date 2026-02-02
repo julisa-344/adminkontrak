@@ -7,7 +7,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma, setAuditContext, auditCreate, auditUpdate, auditDelete } from '@/lib/prisma'
-import { uploadImage, deleteImage, extractPublicId, validateImageFile } from '@/lib/cloudinary'
+import { uploadImage, deleteImage, validateImageFile, isVercelBlobUrl } from '@/lib/blob-storage'
 import { softDeleteMarca, notDeleted } from '@/lib/soft-delete'
 import { auth } from '@/auth'
 
@@ -106,7 +106,7 @@ export async function createMarca(
         throw new Error(validation.error)
       }
 
-      const uploadResult = await uploadImage(logoFile, 'autorent/marcas')
+      const uploadResult = await uploadImage(logoFile, 'marcas')
       if (!uploadResult.success) {
         throw new Error(uploadResult.error || 'Error al subir imagen')
       }
@@ -194,16 +194,13 @@ export async function updateMarca(
         throw new Error(validation.error)
       }
 
-      // Eliminar logo anterior si existe
-      if (marcaActual.logo_url) {
-        const publicId = extractPublicId(marcaActual.logo_url)
-        if (publicId) {
-          await deleteImage(publicId)
-        }
+      // Eliminar logo anterior si existe y es de Vercel Blob
+      if (marcaActual.logo_url && isVercelBlobUrl(marcaActual.logo_url)) {
+        await deleteImage(marcaActual.logo_url)
       }
 
-      // Subir nuevo logo
-      const uploadResult = await uploadImage(logoFile, 'autorent/marcas')
+      // Subir nuevo logo a Vercel Blob
+      const uploadResult = await uploadImage(logoFile, 'marcas')
       if (!uploadResult.success) {
         throw new Error(uploadResult.error || 'Error al subir imagen')
       }
@@ -211,11 +208,8 @@ export async function updateMarca(
       logoUrl = uploadResult.url!
     } else if (logoFile === null) {
       // Eliminar logo existente
-      if (marcaActual.logo_url) {
-        const publicId = extractPublicId(marcaActual.logo_url)
-        if (publicId) {
-          await deleteImage(publicId)
-        }
+      if (marcaActual.logo_url && isVercelBlobUrl(marcaActual.logo_url)) {
+        await deleteImage(marcaActual.logo_url)
       }
       logoUrl = null
     }

@@ -7,30 +7,34 @@ import { revalidatePath } from "next/cache"
 
 const ROL_ADMIN = "ADMINISTRADOR"
 
-export type EstadoReserva = "PENDIENTE" | "CONFIRMADO" | "COMPLETADO" | "CANCELADO"
+// Estos valores deben coincidir EXACTAMENTE con el enum EstadoReserva de PostgreSQL
+export type EstadoReserva = "PENDIENTE" | "CONFIRMADA" | "FINALIZADA" | "CANCELADA"
 
-/** Mapeo BD (cualquier formato) → UI (español) para mostrar en la lista */
+/** Mapeo BD → UI: normaliza cualquier formato al valor del enum */
 const ESTADO_DB_TO_UI: Record<string, EstadoReserva> = {
-  PENDING: "PENDIENTE",
+  // Valores exactos del enum PostgreSQL
   PENDIENTE: "PENDIENTE",
+  CONFIRMADA: "CONFIRMADA",
+  FINALIZADA: "FINALIZADA",
+  CANCELADA: "CANCELADA",
+  // Valores legacy/antiguos que podrían existir
+  RECHAZADA: "CANCELADA",
+  ESPERANDO_CLIENTE: "CONFIRMADA",
+  EN_USO: "CONFIRMADA",
+  ESPERANDO_PROPIETARIO: "CONFIRMADA",
+  // Variantes de capitalización
   Pendiente: "PENDIENTE",
-  CONFIRMED: "CONFIRMADO",
-  CONFIRMADO: "CONFIRMADO",
-  Confirmado: "CONFIRMADO",
-  COMPLETED: "COMPLETADO",
-  COMPLETADO: "COMPLETADO",
-  Completado: "COMPLETADO",
-  CANCELED: "CANCELADO",
-  CANCELADO: "CANCELADO",
-  Cancelado: "CANCELADO",
+  Confirmada: "CONFIRMADA",
+  Finalizada: "FINALIZADA",
+  Cancelada: "CANCELADA",
 }
 
-/** Formato que acepta el enum en la BD (primera letra mayúscula) */
+/** Valores que se envían a la BD - deben ser EXACTAMENTE como el enum PostgreSQL */
 const ESTADO_PARA_BD: Record<EstadoReserva, string> = {
-  PENDIENTE: "Pendiente",
-  CONFIRMADO: "Confirmado",
-  COMPLETADO: "Completado",
-  CANCELADO: "Cancelado",
+  PENDIENTE: "PENDIENTE",
+  CONFIRMADA: "CONFIRMADA",
+  FINALIZADA: "FINALIZADA",
+  CANCELADA: "CANCELADA",
 }
 
 type ReservaRow = {
@@ -106,7 +110,7 @@ export async function updateReservaEstado(
     return { ok: false, error: "No autorizado." }
   }
 
-  const valid: EstadoReserva[] = ["PENDIENTE", "CONFIRMADO", "COMPLETADO", "CANCELADO"]
+  const valid: EstadoReserva[] = ["PENDIENTE", "CONFIRMADA", "FINALIZADA", "CANCELADA"]
   if (!valid.includes(estado)) {
     return { ok: false, error: "Estado no válido." }
   }

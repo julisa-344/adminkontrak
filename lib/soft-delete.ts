@@ -145,7 +145,7 @@ export async function softDeleteUsuario(id: number, reason?: string) {
     const reservasActivas = await prisma.reserva.count({
       where: { 
         idcli: id,
-        estado: { in: ['PENDIENTE', 'CONFIRMADA', 'EN_USO'] },
+        estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
         deleted_at: null
       }
     })

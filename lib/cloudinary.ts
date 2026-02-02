@@ -1,24 +1,13 @@
 /**
- * Utilidades para manejo de imágenes con Cloudinary
+ * @deprecated Este archivo ya no se usa. Las imágenes ahora se manejan con Vercel Blob Storage.
+ * Ver: lib/blob-storage.ts
+ * 
+ * Este archivo se mantiene temporalmente por si hay URLs de Cloudinary existentes en la BD.
+ * Puede eliminarse después de migrar todas las imágenes.
  */
 
-import { v2 as cloudinary } from 'cloudinary'
-
-// Configurar Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
-// Verificar si Cloudinary está configurado
-const isCloudinaryConfigured = () => {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const apiKey = process.env.CLOUDINARY_API_KEY
-  const apiSecret = process.env.CLOUDINARY_API_SECRET
-  
-  return cloudName && cloudName !== 'demo' && apiKey && apiKey !== 'your-api-key' && apiSecret && apiSecret !== 'your-api-secret'
-}
+// Las funciones de Cloudinary ya no están disponibles
+// import { v2 as cloudinary } from 'cloudinary'
 
 export interface UploadResult {
   success: boolean
@@ -28,71 +17,28 @@ export interface UploadResult {
 }
 
 /**
- * Sube una imagen a Cloudinary
+ * @deprecated Usar blob-storage.ts -> uploadImage
  */
-export async function uploadImage(
-  file: File,
-  folder: string = 'autorent/marcas'
-): Promise<UploadResult> {
-  try {
-    // Verificar configuración de Cloudinary
-    if (!isCloudinaryConfigured()) {
-      return {
-        success: false,
-        error: 'Cloudinary no está configurado. Configura las variables de entorno NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET.'
-      }
-    }
-
-    // Convertir File a base64
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
-
-    // Subir a Cloudinary
-    const result = await cloudinary.uploader.upload(base64, {
-      folder,
-      resource_type: 'auto',
-      quality: 'auto:good',
-      format: 'webp', // Convertir a WebP para optimización
-      transformation: [
-        { width: 300, height: 300, crop: 'fit' }, // Redimensionar manteniendo aspecto
-        { quality: 'auto:good' }
-      ]
-    })
-
-    return {
-      success: true,
-      url: result.secure_url,
-      publicId: result.public_id
-    }
-  } catch (error) {
-    console.error('Error al subir imagen a Cloudinary:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    }
+export async function uploadImage(): Promise<UploadResult> {
+  return {
+    success: false,
+    error: 'Cloudinary está deprecado. Usar Vercel Blob Storage.'
   }
 }
 
 /**
- * Elimina una imagen de Cloudinary
+ * @deprecated Usar blob-storage.ts -> deleteImage
  */
-export async function deleteImage(publicId: string): Promise<boolean> {
-  try {
-    const result = await cloudinary.uploader.destroy(publicId)
-    return result.result === 'ok'
-  } catch (error) {
-    console.error('Error al eliminar imagen de Cloudinary:', error)
-    return false
-  }
+export async function deleteImage(): Promise<boolean> {
+  console.warn('Cloudinary está deprecado. Usar Vercel Blob Storage.')
+  return false
 }
 
 /**
- * Extrae el public_id de una URL de Cloudinary
+ * @deprecated Ya no es necesario con Vercel Blob
  */
 export function extractPublicId(url: string): string | null {
   try {
-    // Ejemplo URL: https://res.cloudinary.com/demo/image/upload/v1234567890/folder/filename.ext
     const match = url.match(/\/v\d+\/(.+)\.(jpg|jpeg|png|gif|webp)$/i)
     return match ? match[1] : null
   } catch {
@@ -101,11 +47,11 @@ export function extractPublicId(url: string): string | null {
 }
 
 /**
- * Valida si el archivo es una imagen válida
+ * @deprecated Usar blob-storage.ts -> validateImageFile
  */
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-  const maxSize = 5 * 1024 * 1024 // 5MB
+  const maxSize = 5 * 1024 * 1024
 
   if (!validTypes.includes(file.type)) {
     return {
