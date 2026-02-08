@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Truck, Calendar, Users, LogOut, ExternalLink, Shield, Tag } from "lucide-react"
+import { LayoutDashboard, Truck, Calendar, Users, LogOut, ExternalLink, Shield, Tag, Upload } from "lucide-react"
 import { signOut } from "next-auth/react"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/dashboard/vehiculos", label: "Productos", icon: Truck },
+  { href: "/dashboard/vehiculos/carga-masiva", label: "Carga Masiva", icon: Upload },
   { href: "/dashboard/reservas", label: "Reservas", icon: Calendar },
   { href: "/dashboard/usuarios", label: "Usuarios", icon: Users },
   // { href: "/dashboard/marcas", label: "Marcas", icon: Tag }, // Oculto temporalmente

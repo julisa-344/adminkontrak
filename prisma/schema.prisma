@@ -137,6 +137,11 @@ model vehiculo {
   requiere_certificacion Boolean?
   horas_uso              Float?
   precioalquilo          Float?
+  precio_hora            Float?                 // Precio por hora de alquiler
+  stock                  Int                    @default(1) // Cantidad disponible
+  descripcion            String?                @db.Text     // Descripción del producto
+  disponible             Boolean                @default(true) // Si está disponible para alquiler
+  especificaciones       String?                @db.Text     // Especificaciones en formato "Clave: Valor|Clave: Valor"
   fecharegistro          DateTime?              @db.Date
   fotoveh                String?
   idprop                 Int?
