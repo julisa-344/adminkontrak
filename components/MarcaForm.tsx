@@ -187,7 +187,7 @@ export function MarcaForm({ marca, isEditing = false }: MarcaFormProps) {
                 Logo de la marca
               </label>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
                 {previewUrl ? (
                   <div className="space-y-4">
                     <div className="w-32 h-32 mx-auto relative">

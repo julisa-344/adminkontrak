@@ -80,8 +80,11 @@ export interface ValidatedProduct {
 export interface DuplicateProduct {
   rowNumber: number
   nombre: string
+  marca: string
+  modelo: string
   categoria: string
   existingId: number
+  reason: 'database' | 'excel' // Indica si el duplicado es contra la BD o dentro del mismo archivo Excel
 }
 
 export interface ValidationError {
@@ -617,19 +620,25 @@ export async function validateExcelFile(
         duplicates.push({
           rowNumber: row.rowNumber,
           nombre: row.nombre!,
+          marca: row.marca!,
+          modelo: row.modelo!,
           categoria: row.categoria!,
-          existingId: existingMap.get(productKey)!
+          existingId: existingMap.get(productKey)!,
+          reason: 'database'
         })
         continue
       }
 
       // Verificar duplicado dentro del mismo archivo
       if (seenInFile.has(productKey)) {
-        errors.push({
+        duplicates.push({
           rowNumber: row.rowNumber,
-          field: 'modelo',
-          message: 'Este producto (misma marca, modelo y categoría) está duplicado dentro del mismo archivo',
-          value: `${row.marca} ${row.modelo} - ${row.categoria}`
+          nombre: row.nombre!,
+          marca: row.marca!,
+          modelo: row.modelo!,
+          categoria: row.categoria!,
+          existingId: 0, // No hay ID existente porque es duplicado dentro del Excel
+          reason: 'excel'
         })
         continue
       }

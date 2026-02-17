@@ -1,11 +1,17 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { EstadoVehiculo } from "@prisma/client"
+
+// Imports para selects con crear
+import { SelectConCrear, type SelectOption } from "@/components/ui/SelectConCrear"
+import { getCategoriasActivas, createCategoriaRapida } from "@/lib/actions/admin-categorias"
+import { getMarcasActivas, createMarcaRapida } from "@/lib/actions/admin-marcas"
+import { getModelosPorMarca, createModeloRapido } from "@/lib/actions/admin-modelos"
 
 type VehiculoFormProps = {
   mode: "create" | "edit"
@@ -15,6 +21,9 @@ type VehiculoFormProps = {
     marveh?: string | null
     modveh?: string | null
     categoria?: string | null
+    categoria_id?: number | null
+    marca_id?: number | null
+    modelo_id?: number | null
     precioalquilo?: number | null
     fotoveh?: string | null
     imagenUrl?: string | null
@@ -43,7 +52,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 const MIN_YEAR = 1900
 const MAX_YEAR = CURRENT_YEAR + 1
 
-// Tipos de errores de validación
+// Tipos de errores de validacion
 type ValidationErrors = {
   plaveh?: string
   marveh?: string
@@ -54,6 +63,9 @@ type ValidationErrors = {
   potencia?: string
   horas_uso?: string
   image?: string
+  categoria_id?: string
+  marca_id?: string
+  modelo_id?: string
 }
 
 export function VehiculoForm({
@@ -70,57 +82,145 @@ export function VehiculoForm({
   const [errors, setErrors] = useState<ValidationErrors>({})
   const d = defaultValues ?? {}
 
-  // Validación de placa
+  // Estados para los selects
+  const [categorias, setCategorias] = useState<SelectOption[]>([])
+  const [marcas, setMarcas] = useState<SelectOption[]>([])
+  const [modelos, setModelos] = useState<SelectOption[]>([])
+  const [loadingCategorias, setLoadingCategorias] = useState(true)
+  const [loadingMarcas, setLoadingMarcas] = useState(true)
+  const [loadingModelos, setLoadingModelos] = useState(false)
+
+  // Valores seleccionados
+  const [categoriaId, setCategoriaId] = useState<number | null>(d.categoria_id || null)
+  const [marcaId, setMarcaId] = useState<number | null>(d.marca_id || null)
+  const [modeloId, setModeloId] = useState<number | null>(d.modelo_id || null)
+
+  // Cargar categorias y marcas al montar
+  useEffect(() => {
+    async function loadInitialData() {
+      try {
+        const [categoriasData, marcasData] = await Promise.all([
+          getCategoriasActivas(),
+          getMarcasActivas()
+        ])
+        setCategorias(categoriasData.map(c => ({ id: c.id, nombre: c.nombre })))
+        setMarcas(marcasData.map(m => ({ id: m.id, nombre: m.nombre })))
+      } catch (error) {
+        console.error('Error al cargar datos iniciales:', error)
+      } finally {
+        setLoadingCategorias(false)
+        setLoadingMarcas(false)
+      }
+    }
+    loadInitialData()
+  }, [])
+
+  // Cargar modelos cuando cambia la marca
+  useEffect(() => {
+    async function loadModelos() {
+      if (!marcaId) {
+        setModelos([])
+        setModeloId(null)
+        return
+      }
+
+      setLoadingModelos(true)
+      try {
+        const modelosData = await getModelosPorMarca(marcaId)
+        setModelos(modelosData.map(m => ({ id: m.id, nombre: m.nombre })))
+        
+        // Si el modelo actual no pertenece a la nueva marca, limpiarlo
+        if (modeloId) {
+          const modeloExiste = modelosData.some(m => m.id === modeloId)
+          if (!modeloExiste) {
+            setModeloId(null)
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar modelos:', error)
+        setModelos([])
+      } finally {
+        setLoadingModelos(false)
+      }
+    }
+    loadModelos()
+  }, [marcaId])
+
+  // Handlers para crear nuevos items
+  const handleCreateCategoria = async (nombre: string) => {
+    const result = await createCategoriaRapida(nombre)
+    if (result.success && result.categoria) {
+      setCategorias(prev => [...prev, { id: result.categoria!.id, nombre: result.categoria!.nombre }])
+      return { success: true, id: result.categoria.id }
+    }
+    return { success: false, error: result.error }
+  }
+
+  const handleCreateMarca = async (nombre: string) => {
+    const result = await createMarcaRapida(nombre)
+    if (result.success && result.marca) {
+      setMarcas(prev => [...prev, { id: result.marca!.id, nombre: result.marca!.nombre }])
+      return { success: true, id: result.marca.id }
+    }
+    return { success: false, error: result.error }
+  }
+
+  const handleCreateModelo = async (nombre: string) => {
+    if (!marcaId) {
+      return { success: false, error: 'Primero selecciona una marca' }
+    }
+    const result = await createModeloRapido(nombre, marcaId)
+    if (result.success && result.modelo) {
+      setModelos(prev => [...prev, { id: result.modelo!.id, nombre: result.modelo!.nombre }])
+      return { success: true, id: result.modelo.id }
+    }
+    return { success: false, error: result.error }
+  }
+
+  // Validacion de placa
   const validatePlaca = useCallback((value: string): string | undefined => {
     if (!value.trim()) return "La placa es obligatoria"
     if (value.length < 5 || value.length > 10) return "La placa debe tener entre 5 y 10 caracteres"
-    if (!/^[A-Za-z0-9-]+$/.test(value)) return "La placa solo puede contener letras, números y guiones"
+    if (!/^[A-Za-z0-9-]+$/.test(value)) return "La placa solo puede contener letras, numeros y guiones"
     return undefined
   }, [])
 
-  // Validación de campos requeridos
-  const validateRequired = useCallback((value: string, fieldName: string): string | undefined => {
-    if (!value.trim()) return `${fieldName} es obligatorio`
-    if (value.length > 255) return `${fieldName} no puede exceder 255 caracteres`
-    return undefined
-  }, [])
-
-  // Validación de precio
+  // Validacion de precio
   const validatePrecio = useCallback((value: string): string | undefined => {
     if (!value) return "El precio es obligatorio"
     const num = parseFloat(value)
-    if (isNaN(num)) return "El precio debe ser un número válido"
+    if (isNaN(num)) return "El precio debe ser un numero valido"
     if (num < 0) return "El precio no puede ser negativo"
-    if (num > 1000000) return "El precio parece demasiado alto (máx. 1,000,000)"
+    if (num > 1000000) return "El precio parece demasiado alto (max. 1,000,000)"
     return undefined
   }, [])
 
-  // Validación de año
+  // Validacion de anio
   const validateAnio = useCallback((value: string): string | undefined => {
     if (!value) return undefined // No es obligatorio
     const num = parseInt(value, 10)
-    if (isNaN(num)) return "El año debe ser un número entero"
-    if (num < MIN_YEAR || num > MAX_YEAR) return `El año debe estar entre ${MIN_YEAR} y ${MAX_YEAR}`
+    if (isNaN(num)) return "El anio debe ser un numero entero"
+    if (num < MIN_YEAR || num > MAX_YEAR) return `El anio debe estar entre ${MIN_YEAR} y ${MAX_YEAR}`
     return undefined
   }, [])
 
-  // Validación de números positivos
+  // Validacion de numeros positivos
   const validatePositive = useCallback((value: string, fieldName: string): string | undefined => {
     if (!value) return undefined // No es obligatorio
     const num = parseFloat(value)
-    if (isNaN(num)) return `${fieldName} debe ser un número válido`
+    if (isNaN(num)) return `${fieldName} debe ser un numero valido`
     if (num < 0) return `${fieldName} no puede ser negativo`
     return undefined
   }, [])
 
-  // Validación de imagen
+  // Validacion de imagen
   const validateImage = useCallback((file: File): string | undefined => {
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
     if (!validTypes.includes(file.type)) {
-      return "Tipo de archivo no válido. Use JPG, PNG, GIF o WebP."
+      return "Tipo de archivo no valido. Use JPG, PNG, GIF o WebP."
     }
     if (file.size > 5 * 1024 * 1024) {
-      return "El archivo es demasiado grande. Máximo 5MB."
+      return "El archivo es demasiado grande. Maximo 5MB."
     }
     return undefined
   }, [])
@@ -158,12 +258,6 @@ export function VehiculoForm({
       case 'plaveh':
         error = validatePlaca(value)
         break
-      case 'marveh':
-        error = validateRequired(value, 'Marca')
-        break
-      case 'modveh':
-        error = validateRequired(value, 'Modelo')
-        break
       case 'precioalquilo':
         error = validatePrecio(value)
         break
@@ -189,8 +283,6 @@ export function VehiculoForm({
     const newErrors: ValidationErrors = {}
     
     const plaveh = formData.get('plaveh') as string
-    const marveh = formData.get('marveh') as string
-    const modveh = formData.get('modveh') as string
     const precioalquilo = formData.get('precioalquilo') as string
     const anioveh = formData.get('anioveh') as string
     const peso = formData.get('peso') as string
@@ -198,13 +290,16 @@ export function VehiculoForm({
     const horas_uso = formData.get('horas_uso') as string
 
     newErrors.plaveh = validatePlaca(plaveh)
-    newErrors.marveh = validateRequired(marveh, 'Marca')
-    newErrors.modveh = validateRequired(modveh, 'Modelo')
     newErrors.precioalquilo = validatePrecio(precioalquilo)
     newErrors.anioveh = validateAnio(anioveh)
     newErrors.peso = validatePositive(peso, 'Peso')
     newErrors.potencia = validatePositive(potencia, 'Potencia')
     newErrors.horas_uso = validatePositive(horas_uso, 'Horas de uso')
+
+    // Validar marca (requerida)
+    if (!marcaId) {
+      newErrors.marca_id = 'La marca es obligatoria'
+    }
 
     // Filtrar errores undefined
     const filteredErrors = Object.fromEntries(
@@ -219,6 +314,20 @@ export function VehiculoForm({
     e.preventDefault()
     const form = e.currentTarget
     const formData = new FormData(form)
+    
+    // Agregar los IDs de los selects al formData
+    if (categoriaId) formData.set('categoria_id', String(categoriaId))
+    if (marcaId) formData.set('marca_id', String(marcaId))
+    if (modeloId) formData.set('modelo_id', String(modeloId))
+
+    // Obtener nombres para compatibilidad con campos de texto existentes
+    const marcaSeleccionada = marcas.find(m => m.id === marcaId)
+    const modeloSeleccionado = modelos.find(m => m.id === modeloId)
+    const categoriaSeleccionada = categorias.find(c => c.id === categoriaId)
+    
+    if (marcaSeleccionada) formData.set('marveh', marcaSeleccionada.nombre)
+    if (modeloSeleccionado) formData.set('modveh', modeloSeleccionado.nombre)
+    if (categoriaSeleccionada) formData.set('categoria', categoriaSeleccionada.nombre)
     
     // Validar en frontend primero
     if (!validateForm(formData)) {
@@ -240,7 +349,7 @@ export function VehiculoForm({
       } else if (mode === "edit" && idveh != null && onSubmitEdit) {
         res = await onSubmitEdit(idveh, formData)
       } else {
-        res = { ok: false, error: "Acción no configurada" }
+        res = { ok: false, error: "Accion no configurada" }
       }
       if (res.ok) {
         toast.success(mode === "create" ? "Producto creado exitosamente" : "Producto actualizado exitosamente")
@@ -278,7 +387,7 @@ export function VehiculoForm({
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h2 className="text-xl font-semibold text-gray-900">
-          {mode === "create" ? "Nuevo producto / vehículo" : "Editar producto"}
+          {mode === "create" ? "Nuevo producto / vehiculo" : "Editar producto"}
         </h2>
       </div>
 
@@ -303,58 +412,58 @@ export function VehiculoForm({
           <FieldError error={errors.plaveh} />
         </div>
 
-        {/* Marca */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Marca <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="marveh"
-            required
-            maxLength={255}
-            defaultValue={d.marveh ?? ""}
-            onBlur={handleBlur}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.marveh ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Ej. Caterpillar"
-          />
-          <FieldError error={errors.marveh} />
-        </div>
+        {/* Categoria - SELECT CON CREAR */}
+        <SelectConCrear
+          label="Categoria"
+          name="categoria_id"
+          value={categoriaId}
+          options={categorias}
+          onChange={setCategoriaId}
+          onCreateNew={handleCreateCategoria}
+          placeholder="Seleccionar categoria..."
+          loading={loadingCategorias}
+          error={errors.categoria_id}
+          createLabel="Crear nueva categoria"
+          helpText="Selecciona o crea una categoria para el producto"
+        />
 
-        {/* Modelo */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Modelo <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="modveh"
-            required
-            maxLength={255}
-            defaultValue={d.modveh ?? ""}
-            onBlur={handleBlur}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.modveh ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Ej. Excavadora 20T"
-          />
-          <FieldError error={errors.modveh} />
-        </div>
+        {/* Marca - SELECT CON CREAR */}
+        <SelectConCrear
+          label="Marca"
+          name="marca_id"
+          value={marcaId}
+          options={marcas}
+          onChange={(value) => {
+            setMarcaId(value)
+            // Limpiar error si se selecciona
+            if (value) {
+              setErrors(prev => ({ ...prev, marca_id: undefined }))
+            }
+          }}
+          onCreateNew={handleCreateMarca}
+          placeholder="Seleccionar marca..."
+          required
+          loading={loadingMarcas}
+          error={errors.marca_id}
+          createLabel="Crear nueva marca"
+          helpText="Selecciona o crea la marca del producto"
+        />
 
-        {/* Categoría */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-          <input
-            type="text"
-            name="categoria"
-            maxLength={255}
-            defaultValue={d.categoria ?? ""}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Ej. Maquinaria Pesada"
-          />
-        </div>
+        {/* Modelo - SELECT CON CREAR (depende de marca) */}
+        <SelectConCrear
+          label="Modelo"
+          name="modelo_id"
+          value={modeloId}
+          options={modelos}
+          onChange={setModeloId}
+          onCreateNew={handleCreateModelo}
+          placeholder={marcaId ? "Seleccionar modelo..." : "Primero selecciona una marca"}
+          disabled={!marcaId}
+          loading={loadingModelos}
+          error={errors.modelo_id}
+          createLabel="Crear nuevo modelo"
+          helpText={marcaId ? "Selecciona o crea el modelo del producto" : "Selecciona una marca primero"}
+        />
 
         {/* Precio alquiler */}
         <div>
@@ -378,9 +487,9 @@ export function VehiculoForm({
           <FieldError error={errors.precioalquilo} />
         </div>
 
-        {/* Año */}
+        {/* Anio */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Anio</label>
           <input
             type="number"
             name="anioveh"
@@ -394,7 +503,7 @@ export function VehiculoForm({
             placeholder={String(CURRENT_YEAR)}
           />
           <FieldError error={errors.anioveh} />
-          <p className="mt-1 text-xs text-gray-500">Año entre {MIN_YEAR} y {MAX_YEAR}</p>
+          <p className="mt-1 text-xs text-gray-500">Anio entre {MIN_YEAR} y {MAX_YEAR}</p>
         </div>
 
         {/* Capacidad */}
@@ -406,7 +515,7 @@ export function VehiculoForm({
             maxLength={255}
             defaultValue={d.capacidad ?? ""}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Ej. 1.2 m³"
+            placeholder="Ej. 1.2 m3"
           />
         </div>
 
@@ -477,7 +586,7 @@ export function VehiculoForm({
           <FieldError error={errors.horas_uso} />
         </div>
 
-        {/* Estado (solo en edición) */}
+        {/* Estado (solo en edicion) */}
         {mode === "edit" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
@@ -504,14 +613,14 @@ export function VehiculoForm({
             maxLength={500}
             defaultValue={d.accesorios ?? ""}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Opcional (máx. 500 caracteres)"
+            placeholder="Opcional (max. 500 caracteres)"
           />
         </div>
 
-        {/* Imagen del vehículo */}
+        {/* Imagen del vehiculo */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Imagen del vehículo
+            Imagen del vehiculo
           </label>
           <input
             type="file"
@@ -523,7 +632,7 @@ export function VehiculoForm({
           />
           <FieldError error={errors.image} />
           <p className="text-xs text-gray-500 mt-1">
-            Formatos aceptados: JPG, PNG, GIF, WEBP. Tamaño máximo: 5MB
+            Formatos aceptados: JPG, PNG, GIF, WEBP. Tamanio maximo: 5MB
           </p>
           {/* Preview de la imagen */}
           {(imagePreview || d.imagenUrl) && (
@@ -538,7 +647,7 @@ export function VehiculoForm({
           )}
         </div>
 
-        {/* Requiere certificación */}
+        {/* Requiere certificacion */}
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -547,11 +656,11 @@ export function VehiculoForm({
             defaultChecked={d.requiere_certificacion ?? false}
             className="rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <label className="ml-2 text-sm text-gray-700">Requiere certificación del operador</label>
+          <label className="ml-2 text-sm text-gray-700">Requiere certificacion del operador</label>
         </div>
       </div>
 
-      {/* Botones de acción */}
+      {/* Botones de accion */}
       <div className="flex gap-4 pt-4 border-t">
         <button
           type="submit"

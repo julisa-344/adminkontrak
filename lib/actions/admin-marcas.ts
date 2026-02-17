@@ -316,3 +316,63 @@ export async function getMarcasActivas() {
     return []
   }
 }
+
+/**
+ * Crea una marca rapida (para uso desde modales en otros formularios)
+ * Version simplificada de createMarca
+ */
+export async function createMarcaRapida(nombre: string) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      throw new Error('No autorizado')
+    }
+
+    // Validar que el nombre no este vacio
+    if (!nombre || nombre.trim().length === 0) {
+      throw new Error('El nombre de la marca es obligatorio')
+    }
+
+    // Validar longitud maxima
+    if (nombre.length > 100) {
+      throw new Error('El nombre no puede exceder 100 caracteres')
+    }
+
+    // Validar que el nombre no exista
+    const existingMarca = await prisma.marca.findFirst({
+      where: { 
+        nombre: nombre.trim(),
+        deleted_at: null
+      }
+    })
+
+    if (existingMarca) {
+      throw new Error('Ya existe una marca con ese nombre')
+    }
+
+    // Crear la marca
+    const marca = await prisma.marca.create({
+      data: {
+        nombre: nombre.trim(),
+        descripcion: null,
+        logo_url: null,
+        activa: true,
+        created_by: parseInt(session.user.id),
+        updated_by: parseInt(session.user.id)
+      }
+    })
+
+    revalidatePath('/dashboard/marcas')
+    revalidatePath('/dashboard/vehiculos')
+    revalidatePath('/dashboard/vehiculos/nuevo')
+    revalidatePath('/dashboard/modelos')
+    
+    return { success: true, marca }
+  } catch (error) {
+    console.error('Error al crear marca rapida:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    }
+  }
+}

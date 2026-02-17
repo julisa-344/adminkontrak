@@ -52,10 +52,62 @@ model marca {
   
   // Relaciones
   vehiculos     vehiculo[]
+  modelos       modelo[]   // Relación con modelos de esta marca
   
   // Relaciones de auditoría
   created_by_user usuario? @relation("MarcaCreatedBy", fields: [created_by], references: [idprop])
   updated_by_user usuario? @relation("MarcaUpdatedBy", fields: [updated_by], references: [idprop])
+}
+
+// Modelo para gestión de categorías
+model categoria {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique @db.VarChar(100)
+  descripcion   String?  @db.Text
+  activa        Boolean  @default(true)
+  
+  // Campos de auditoría
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime? // Soft delete
+  deleted_by    Int?
+  
+  // Relaciones
+  vehiculos     vehiculo[]
+  
+  // Relaciones de auditoría
+  created_by_user usuario? @relation("CategoriaCreatedBy", fields: [created_by], references: [idprop])
+  updated_by_user usuario? @relation("CategoriaUpdatedBy", fields: [updated_by], references: [idprop])
+}
+
+// Modelo para gestión de modelos de vehículos
+model modelo {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @db.VarChar(100)
+  descripcion   String?  @db.Text
+  activo        Boolean  @default(true)
+  marca_id      Int?     // Relación con marca
+  
+  // Campos de auditoría
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime? // Soft delete
+  deleted_by    Int?
+  
+  // Relaciones
+  marca         marca?   @relation(fields: [marca_id], references: [id], onDelete: SetNull)
+  vehiculos     vehiculo[]
+  
+  // Relaciones de auditoría
+  created_by_user usuario? @relation("ModeloCreatedBy", fields: [created_by], references: [idprop])
+  updated_by_user usuario? @relation("ModeloUpdatedBy", fields: [updated_by], references: [idprop])
+  
+  // Índice para combinación única nombre + marca
+  @@unique([nombre, marca_id])
 }
 
 model reserva {
@@ -120,6 +172,14 @@ model usuario {
   // Relaciones de marcas
   marcas_created       marca[]                @relation("MarcaCreatedBy")
   marcas_updated       marca[]                @relation("MarcaUpdatedBy")
+  
+  // Relaciones de categorías
+  categorias_created   categoria[]            @relation("CategoriaCreatedBy")
+  categorias_updated   categoria[]            @relation("CategoriaUpdatedBy")
+  
+  // Relaciones de modelos
+  modelos_created      modelo[]               @relation("ModeloCreatedBy")
+  modelos_updated      modelo[]               @relation("ModeloUpdatedBy")
 }
 
 model vehiculo {
@@ -148,6 +208,8 @@ model vehiculo {
   estveh                 EstadoVehiculo?
   imagenUrl              String?
   marca_id               Int?
+  categoria_id           Int?                   // Nueva relación con tabla categoria
+  modelo_id              Int?                   // Nueva relación con tabla modelo
   
   // Campos de auditoría
   created_at             DateTime               @default(now())
@@ -163,6 +225,8 @@ model vehiculo {
   usuario                usuario?               @relation(fields: [idprop], references: [idprop], onDelete: NoAction, onUpdate: NoAction, map: "fk2pu1225mw666tkb93d0dhd49v")
   vehiculos_eliminados   vehiculos_eliminados[]
   marca                  marca?                 @relation(fields: [marca_id], references: [id], onDelete: SetNull)
+  categoriaRel           categoria?             @relation(fields: [categoria_id], references: [id], onDelete: SetNull)
+  modeloRel              modelo?                @relation(fields: [modelo_id], references: [id], onDelete: SetNull)
 }
 
 model vehiculos_eliminados {

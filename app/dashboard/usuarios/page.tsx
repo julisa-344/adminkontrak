@@ -1,7 +1,7 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { listUsers } from "@/lib/actions/admin-usuario"
-import { CrearAdminForm } from "@/components/CrearAdminForm"
+// import { CrearAdminForm } from "@/components/CrearAdminForm"
 import { Users, Mail, User, Shield } from "lucide-react"
 
 export default async function DashboardUsuariosPage() {
@@ -16,9 +16,11 @@ export default async function DashboardUsuariosPage() {
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Usuarios</h1>
       <p className="text-gray-600 mb-8">Gestiona usuarios y administradores.</p>
 
+      {/* Botón de crear administrador temporalmente oculto
       <div className="mb-8">
         <CrearAdminForm />
       </div>
+      */}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">

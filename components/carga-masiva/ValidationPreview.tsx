@@ -139,21 +139,29 @@ export function ValidationPreview({
                 <thead className="bg-yellow-50/50 sticky top-0">
                   <tr>
                     <th className="text-left p-3 font-medium text-gray-700">Fila</th>
-                    <th className="text-left p-3 font-medium text-gray-700">Nombre</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Marca</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Modelo</th>
                     <th className="text-left p-3 font-medium text-gray-700">Categoría</th>
-                    <th className="text-left p-3 font-medium text-gray-700">Estado</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Motivo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {result.duplicates.map((dup) => (
                     <tr key={dup.rowNumber} className="border-t border-yellow-100 hover:bg-yellow-50/30">
                       <td className="p-3 text-gray-500">#{dup.rowNumber}</td>
-                      <td className="p-3 font-medium text-gray-900">{dup.nombre}</td>
+                      <td className="p-3 font-medium text-gray-900">{dup.marca}</td>
+                      <td className="p-3 text-gray-700">{dup.modelo}</td>
                       <td className="p-3 text-gray-600">{dup.categoria}</td>
                       <td className="p-3">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
-                          Ya existe (ID: {dup.existingId})
-                        </span>
+                        {dup.reason === 'database' ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
+                            Ya existe en BD (ID: {dup.existingId})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                            Duplicado en Excel
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

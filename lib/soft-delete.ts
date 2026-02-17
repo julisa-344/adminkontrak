@@ -135,6 +135,118 @@ export async function softDeleteMarca(id: number, reason?: string) {
 }
 
 /**
+ * Soft delete para categorías
+ */
+export async function softDeleteCategoria(id: number, reason?: string) {
+  try {
+    await setupAuditContext(`Eliminación lógica de categoría: ${reason || 'Sin razón especificada'}`)
+
+    // Verificar que no tenga vehículos activos asociados
+    const vehiculosActivos = await prisma.vehiculo.count({
+      where: { 
+        categoria_id: id,
+        deleted_at: null
+      }
+    })
+
+    if (vehiculosActivos > 0) {
+      throw new Error(`No se puede eliminar la categoría porque tiene ${vehiculosActivos} vehículo(s) activo(s) asociado(s)`)
+    }
+
+    // Obtener datos antes del soft delete
+    const categoria = await prisma.categoria.findUnique({
+      where: { id }
+    })
+
+    if (!categoria) {
+      throw new Error('Categoría no encontrada')
+    }
+
+    if (categoria.deleted_at) {
+      throw new Error('La categoría ya está eliminada')
+    }
+
+    const session = await auth()
+    
+    // Marcar como eliminada
+    const categoriaEliminada = await prisma.categoria.update({
+      where: { id },
+      data: {
+        deleted_at: new Date(),
+        deleted_by: session?.user?.id ? parseInt(session.user.id) : null
+      }
+    })
+
+    // Auditar la eliminación
+    await auditDelete('categoria', id, categoria, `Categoría marcada como eliminada: ${reason || 'Sin razón'}`)
+
+    return { success: true, categoria: categoriaEliminada }
+  } catch (error) {
+    console.error('Error en soft delete de categoría:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    }
+  }
+}
+
+/**
+ * Soft delete para modelos
+ */
+export async function softDeleteModelo(id: number, reason?: string) {
+  try {
+    await setupAuditContext(`Eliminación lógica de modelo: ${reason || 'Sin razón especificada'}`)
+
+    // Verificar que no tenga vehículos activos asociados
+    const vehiculosActivos = await prisma.vehiculo.count({
+      where: { 
+        modelo_id: id,
+        deleted_at: null
+      }
+    })
+
+    if (vehiculosActivos > 0) {
+      throw new Error(`No se puede eliminar el modelo porque tiene ${vehiculosActivos} vehículo(s) activo(s) asociado(s)`)
+    }
+
+    // Obtener datos antes del soft delete
+    const modelo = await prisma.modelo.findUnique({
+      where: { id }
+    })
+
+    if (!modelo) {
+      throw new Error('Modelo no encontrado')
+    }
+
+    if (modelo.deleted_at) {
+      throw new Error('El modelo ya está eliminado')
+    }
+
+    const session = await auth()
+    
+    // Marcar como eliminado
+    const modeloEliminado = await prisma.modelo.update({
+      where: { id },
+      data: {
+        deleted_at: new Date(),
+        deleted_by: session?.user?.id ? parseInt(session.user.id) : null
+      }
+    })
+
+    // Auditar la eliminación
+    await auditDelete('modelo', id, modelo, `Modelo marcado como eliminado: ${reason || 'Sin razón'}`)
+
+    return { success: true, modelo: modeloEliminado }
+  } catch (error) {
+    console.error('Error en soft delete de modelo:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    }
+  }
+}
+
+/**
  * Soft delete para usuarios
  */
 export async function softDeleteUsuario(id: number, reason?: string) {
